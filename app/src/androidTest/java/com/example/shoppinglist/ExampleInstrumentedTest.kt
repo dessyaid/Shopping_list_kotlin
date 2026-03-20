@@ -21,14 +21,14 @@ class ExampleInstrumentedTest {
 
     @Test
     fun addItemTest() {
-        composeTestRule.onNodeWithText("Enter item").performTextInput("Milk")
+        composeTestRule.onNodeWithText("Add Item").performTextInput("Milk")
         composeTestRule.onNodeWithText("Add").performClick()
-        composeTestRule.onNodeWithText("Enter item").assertExists()
+        composeTestRule.onNodeWithText("Milk").assertExists()
     }
 
     @Test
     fun deleteItemTest() {
-        composeTestRule.onNodeWithText("Enter item").performTextInput("Bread")
+        composeTestRule.onNodeWithText("Add Item").performTextInput("Bread")
         composeTestRule.onNodeWithText("Add").performClick()
 
         composeTestRule.onAllNodesWithContentDescription("Delete")[0].performClick()
@@ -38,7 +38,7 @@ class ExampleInstrumentedTest {
 
     @Test
     fun undoDeleteTest() {
-        composeTestRule.onNodeWithText("Enter item").performTextInput("Tomato")
+        composeTestRule.onNodeWithText("Add Item").performTextInput("Tomato")
         composeTestRule.onNodeWithText("Add").performClick()
 
         composeTestRule.onAllNodesWithContentDescription("Delete")[0].performClick()
