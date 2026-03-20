@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,9 +17,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -159,6 +164,13 @@ class ShoppingListViewModel(application: Application): AndroidViewModel(applicat
         }
     }
 
+    fun updateItem(item: ShoppingItem) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.updateItem(item)
+            loadShoppingList()
+        }
+    }
+
     fun toggleBought(item: ShoppingItem) {
         viewModelScope.launch(Dispatchers.IO) {
             val updateItem = item.copy(isBought = !item.isBought)
@@ -194,11 +206,51 @@ fun AddItemButton(addItem: (String) -> Unit = {}) {
 }
 
 @Composable
+fun DeleteIconButton(onDelete: () -> Unit) {
+    IconButton(onClick = onDelete) {
+        Icon(
+            imageVector = Icons.Default.Delete,
+            contentDescription = "Delete",
+            tint = Color.Gray
+        )
+    }
+}
+
+@Composable
+fun SettingsIconButton(onEdit: () -> Unit) {
+    var showMenu by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { showMenu = true }) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "Options",
+            )
+        }
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Change item") },
+                onClick = {
+                    onEdit()
+                    showMenu = false
+                }
+            )
+        }
+    }
+}
+
+@Composable
 fun ShoppingItemCard(
     item: ShoppingItem,
     onToggleBought: () -> Unit = {},
-    onDelete: () -> Unit = {}
+    onDelete: () -> Unit = {},
+    onUpdateName: (String) -> Unit = {},
 ) {
+    var isEditing by remember { mutableStateOf(false) }
+    var editedName by remember { mutableStateOf(item.name) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -207,26 +259,43 @@ fun ShoppingItemCard(
                 if (item.isBought) Color.LightGray.copy(alpha = 0.5f) else Color.LightGray,
                 MaterialTheme.shapes.large
             )
-            .clickable { onToggleBought() }
-            .padding(16.dp),
+            .clickable { if (!isEditing) onToggleBought() }
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Checkbox(checked = item.isBought, onCheckedChange = {
-            onToggleBought()
-        })
-        Text(
-            text = item.name,
-            modifier = Modifier.weight(1f),
-            fontSize = 18.sp,
-            textDecoration = if (item.isBought) TextDecoration.LineThrough else TextDecoration.None,
-            color = if (item.isBought) Color.Gray else Color.Black
-        )
-        IconButton(onClick = onDelete) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Delete",
-                tint = Color.Gray
+        if (!isEditing) {
+            Checkbox(checked = item.isBought, onCheckedChange = {
+                onToggleBought()
+            })
+            Text(
+                text = item.name,
+                modifier = Modifier.weight(1f),
+                fontSize = 18.sp,
+                textDecoration = if (item.isBought)
+                    TextDecoration.LineThrough else TextDecoration.None,
+                color = if (item.isBought) Color.Gray else Color.Black
             )
+            
+            DeleteIconButton(onDelete = onDelete)
+            
+            SettingsIconButton(onEdit = { isEditing = true })
+
+        } else {
+            OutlinedTextField(
+                value = editedName,
+                onValueChange = { editedName = it },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+            IconButton(onClick = {
+                if (editedName.isNotBlank()) {
+                    onUpdateName(editedName)
+                    isEditing = false
+                }
+            }) {
+                Icon(Icons.Default.Check,
+                    contentDescription = "Save", tint = Color.Green)
+            }
         }
     }
 }
@@ -272,7 +341,7 @@ fun ShoppingListScreen(viewModel: ShoppingListViewModel = viewModel(
                         viewModel.deleteItem(item)
                         scope.launch {
                             val result = snackbarHostState.showSnackbar(
-                                message = "Entity deleted",
+                                message = "Item deleted",
                                 actionLabel = "Cancel",
                                 duration = SnackbarDuration.Short
                             )
@@ -280,6 +349,9 @@ fun ShoppingListScreen(viewModel: ShoppingListViewModel = viewModel(
                                 viewModel.restoreItem(deletedItem)
                             }
                         }
+                    },
+                    onUpdateName = { newName ->
+                        viewModel.updateItem(item.copy(name = newName))
                     }
                 )
             }
