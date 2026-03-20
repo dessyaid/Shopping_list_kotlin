@@ -1,24 +1,49 @@
 package com.example.shoppinglist
 
-import androidx.test.platform.app.InstrumentationRegistry
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 
 import org.junit.Test
 import org.junit.runner.RunWith
 
-import org.junit.Assert.*
+import org.junit.Rule
 
-/**
- * Instrumented test, which will execute on an Android device.
- *
- * See [testing documentation](http://d.android.com/tools/testing).
- */
+
 @RunWith(AndroidJUnit4::class)
 class ExampleInstrumentedTest {
+
+    @get:Rule
+    val composeTestRule = createAndroidComposeRule<MainActivity>()
+
     @Test
-    fun useAppContext() {
-        // Context of the app under test.
-        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.example.shoppinglist", appContext.packageName)
+    fun addItemTest() {
+        composeTestRule.onNodeWithText("Enter item").performTextInput("Milk")
+        composeTestRule.onNodeWithText("Add").performClick()
+        composeTestRule.onNodeWithText("Enter item").assertExists()
+    }
+
+    @Test
+    fun deleteItemTest() {
+        composeTestRule.onNodeWithText("Enter item").performTextInput("Bread")
+        composeTestRule.onNodeWithText("Add").performClick()
+
+        composeTestRule.onAllNodesWithContentDescription("Delete")[0].performClick()
+
+        composeTestRule.onNodeWithText("Bread").assertDoesNotExist()
+    }
+
+    @Test
+    fun undoDeleteTest() {
+        composeTestRule.onNodeWithText("Enter item").performTextInput("Tomato")
+        composeTestRule.onNodeWithText("Add").performClick()
+
+        composeTestRule.onAllNodesWithContentDescription("Delete")[0].performClick()
+        composeTestRule.onNodeWithText("Cancel").performClick()
+
+        composeTestRule.onNodeWithText("Tomato").assertExists()
     }
 }
