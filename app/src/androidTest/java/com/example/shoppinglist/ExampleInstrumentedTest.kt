@@ -1,10 +1,7 @@
 package com.example.shoppinglist
 
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 
 import org.junit.Test
@@ -24,6 +21,7 @@ class ExampleInstrumentedTest {
         composeTestRule.onNodeWithText("Add Item").performTextInput("Milk")
         composeTestRule.onNodeWithText("Add").performClick()
         composeTestRule.onNodeWithText("Milk").assertExists()
+        composeTestRule.onAllNodesWithContentDescription("Delete")[0].performClick()
     }
 
     @Test
@@ -45,5 +43,19 @@ class ExampleInstrumentedTest {
         composeTestRule.onNodeWithText("Cancel").performClick()
 
         composeTestRule.onNodeWithText("Tomato").assertExists()
+        composeTestRule.onAllNodesWithContentDescription("Delete")[0].performClick()
+    }
+
+    @Test
+    fun boughtTest() {
+        val itemName = "Cheese"
+        composeTestRule.onNodeWithText("Add Item").performTextInput(itemName)
+        composeTestRule.onNodeWithText("Add").performClick()
+
+        composeTestRule.onNode(isToggleable()).performClick()
+
+        composeTestRule.onNode(isToggleable()).assertIsOn()
+
+        composeTestRule.onAllNodesWithContentDescription("Delete")[0].performClick()
     }
 }
