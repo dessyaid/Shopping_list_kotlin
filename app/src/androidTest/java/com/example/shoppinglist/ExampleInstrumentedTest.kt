@@ -26,10 +26,10 @@ class ExampleInstrumentedTest {
 
     @Test
     fun deleteItemTest() {
-        composeTestRule.onNodeWithText("Add Item").performTextInput("Bread")
-        composeTestRule.onNodeWithText("Add").performClick()
+            composeTestRule.onNodeWithText("Add Item").performTextInput("Bread")
+            composeTestRule.onNodeWithText("Add").performClick()
 
-        composeTestRule.onAllNodesWithContentDescription("Delete")[0].performClick()
+            composeTestRule.onAllNodesWithContentDescription("Delete")[0].performClick()
 
         composeTestRule.onNodeWithText("Bread").assertDoesNotExist()
     }
