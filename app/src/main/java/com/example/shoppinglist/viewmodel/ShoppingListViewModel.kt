@@ -1,7 +1,6 @@
 package com.example.shoppinglist.viewmodel
 
 import android.app.Application
-import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -9,60 +8,86 @@ import androidx.lifecycle.viewModelScope
 import com.example.shoppinglist.dao.ShoppingDao
 import com.example.shoppinglist.db.ShoppingDatabase
 import com.example.shoppinglist.model.ShoppingItem
+import com.example.shoppinglist.model.TabItem
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ShoppingListViewModel(application: Application): AndroidViewModel(application) {
     private val dao: ShoppingDao = ShoppingDatabase.getInstance(application).shoppingDao()
-    private val _shoppingList = mutableStateListOf<ShoppingItem>()
-    val shoppingList: List<ShoppingItem> get() = _shoppingList
 
-    init {
-        loadShoppingList()
+    val tabs: StateFlow<List<TabItem>> = dao.getAllTabs()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _selectedTabId = MutableStateFlow<Int?>(null)
+    val selectedTabId: StateFlow<Int?> = _selectedTabId
+
+    val shoppingList: StateFlow<List<ShoppingItem>> = _selectedTabId.flatMapLatest { tabId ->
+        if (tabId != null) dao.getItemsForTab(tabId) else kotlinx.coroutines.flow.flowOf(emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun selectTab(tabId: Int) {
+        _selectedTabId.value = tabId
     }
 
-    private fun loadShoppingList() {
+    fun addTab(title: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val items = dao.getAllItems()
-            _shoppingList.clear()
-            _shoppingList.addAll(items)
+            val id = dao.insertTab(TabItem(title = title))
+            if (_selectedTabId.value == null) {
+                _selectedTabId.value = id.toInt()
+            }
+        }
+    }
+
+    fun renameTab(tab: TabItem, newTitle: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertTab(tab.copy(title = newTitle))
+        }
+    }
+
+    fun deleteTab(tab: TabItem) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.deleteTabWithItems(tab)
+            if (_selectedTabId.value == tab.id) {
+                _selectedTabId.value = null
+            }
         }
     }
 
     fun addItem(name: String) {
+        val currentTabId = _selectedTabId.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val newItem = ShoppingItem(name = name)
-            dao.insertItem(newItem)
-            loadShoppingList()
+            dao.insertItem(ShoppingItem(name = name, tabId = currentTabId))
         }
     }
 
     fun restoreItem(item: ShoppingItem) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.insertItem(item)
-            loadShoppingList()
         }
     }
 
     fun deleteItem(item: ShoppingItem) {
-        viewModelScope.launch (Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO) {
             dao.deleteItem(item)
-            loadShoppingList()
         }
     }
 
     fun updateItem(item: ShoppingItem) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.updateItem(item)
-            loadShoppingList()
         }
     }
 
     fun toggleBought(item: ShoppingItem) {
         viewModelScope.launch(Dispatchers.IO) {
-            val updateItem = item.copy(isBought = !item.isBought)
-            dao.updateItem(updateItem)
-            loadShoppingList()
+            dao.updateItem(item.copy(isBought = !item.isBought))
         }
     }
 }

@@ -6,8 +6,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.shoppinglist.dao.ShoppingDao
 import com.example.shoppinglist.model.ShoppingItem
+import com.example.shoppinglist.model.TabItem
 
-@Database(entities = [ShoppingItem::class], version = 1)
+@Database(entities = [ShoppingItem::class, TabItem::class], version = 2)
 abstract class ShoppingDatabase: RoomDatabase() {
     abstract fun shoppingDao(): ShoppingDao
 
@@ -21,7 +22,9 @@ abstract class ShoppingDatabase: RoomDatabase() {
                     context.applicationContext,
                     ShoppingDatabase::class.java,
                     "shopping_db"
-                ).build()
+                )
+                .fallbackToDestructiveMigration() // For simplicity during dev
+                .build()
                 INSTANCE = instance
                 instance
             }
