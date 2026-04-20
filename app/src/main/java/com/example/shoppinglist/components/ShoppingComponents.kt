@@ -116,7 +116,6 @@ fun ShoppingItemCard(
             )
             
             DeleteIconButton(onDelete = onDelete)
-            
             SettingsIconButton(onEdit = { isEditing = true })
 
         } else {
