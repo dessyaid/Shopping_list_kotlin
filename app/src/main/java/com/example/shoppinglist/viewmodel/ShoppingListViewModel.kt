@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -22,8 +23,13 @@ import kotlinx.coroutines.launch
 class ShoppingListViewModel(application: Application): AndroidViewModel(application) {
     private val dao: ShoppingDao = ShoppingDatabase.getInstance(application).shoppingDao()
 
-    val tabs: StateFlow<List<TabItem>> = dao.getAllTabs()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val tabs: StateFlow<List<TabItem>?> = dao.getAllTabs()
+        .onEach { fetchedTabs ->
+            if (_selectedTabId.value == null && fetchedTabs.isNotEmpty()) {
+                _selectedTabId.value = fetchedTabs.first().id
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private val _selectedTabId = MutableStateFlow<Int?>(null)
     val selectedTabId: StateFlow<Int?> = _selectedTabId

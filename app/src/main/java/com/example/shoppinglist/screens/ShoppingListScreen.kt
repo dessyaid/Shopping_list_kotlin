@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.shoppinglist.components.AddItemButton
+import com.example.shoppinglist.components.ShoppingCartLoading
 import com.example.shoppinglist.components.ShoppingItemCard
 import com.example.shoppinglist.model.TabItem
 import com.example.shoppinglist.viewmodel.ShoppingListViewModel
@@ -28,7 +29,7 @@ fun ShoppingListScreen(viewModel: ShoppingListViewModel = viewModel(
     factory = ShoppingListViewModelFactory(LocalContext.current
         .applicationContext as Application)
 )) {
-    val tabs by viewModel.tabs.collectAsStateWithLifecycle()
+    val tabsState by viewModel.tabs.collectAsStateWithLifecycle()
     val selectedTabId by viewModel.selectedTabId.collectAsStateWithLifecycle()
     val shoppingList by viewModel.shoppingList.collectAsStateWithLifecycle()
     
@@ -38,156 +39,161 @@ fun ShoppingListScreen(viewModel: ShoppingListViewModel = viewModel(
     var showRenameTabDialog by remember { mutableStateOf<TabItem?>(null) }
     var showTabMenu by remember { mutableStateOf(false) }
 
-    val currentTab = tabs.find { it.id == selectedTabId }
+    if (tabsState == null) {
+        ShoppingCartLoading()
+    } else {
+        val tabs = tabsState!!
+        val currentTab = tabs.find { it.id == selectedTabId }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(currentTab?.title ?: "Shopping List") },
-                actions = {
-                    IconButton(onClick = { showAddTabDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Tab")
-                    }
-                    if (currentTab != null) {
-                        Box {
-                            IconButton(onClick = { showTabMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Tab Settings")
-                            }
-                            DropdownMenu(
-                                expanded = showTabMenu,
-                                onDismissRequest = { showTabMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Rename Tab") },
-                                    onClick = {
-                                        showRenameTabDialog = currentTab
-                                        showTabMenu = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Delete Tab") },
-                                    onClick = {
-                                        viewModel.deleteTab(currentTab)
-                                        showTabMenu = false
-                                    }
-                                )
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(currentTab?.title ?: "Shopping List") },
+                    actions = {
+                        IconButton(onClick = { showAddTabDialog = true }) {
+                            Icon(Icons.Default.Add, contentDescription = "Add Tab")
+                        }
+                        if (currentTab != null) {
+                            Box {
+                                IconButton(onClick = { showTabMenu = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "Tab Settings")
+                                }
+                                DropdownMenu(
+                                    expanded = showTabMenu,
+                                    onDismissRequest = { showTabMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Rename Tab") },
+                                        onClick = {
+                                            showRenameTabDialog = currentTab
+                                            showTabMenu = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Delete Tab") },
+                                        onClick = {
+                                            viewModel.deleteTab(currentTab)
+                                            showTabMenu = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        modifier = Modifier.fillMaxSize()
-    ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
-            if (tabs.isNotEmpty()) {
-                ScrollableTabRow(
-                    selectedTabIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0),
-                    edgePadding = 16.dp
-                ) {
-                    tabs.forEach { tab ->
-                        Tab(
-                            selected = selectedTabId == tab.id,
-                            onClick = { viewModel.selectTab(tab.id) },
-                            text = { Text(tab.title) }
-                        )
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            modifier = Modifier.fillMaxSize()
+        ) { innerPadding ->
+            Column(modifier = Modifier.padding(innerPadding)) {
+                if (tabs.isNotEmpty()) {
+                    ScrollableTabRow(
+                        selectedTabIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0),
+                        edgePadding = 16.dp
+                    ) {
+                        tabs.forEach { tab ->
+                            Tab(
+                                selected = selectedTabId == tab.id,
+                                onClick = { viewModel.selectTab(tab.id) },
+                                text = { Text(tab.title) }
+                            )
+                        }
                     }
                 }
-            }
 
-            if (selectedTabId != null) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                ) {
-                    item {
-                        AddItemButton { viewModel.addItem(it) }
-                    }
-                    itemsIndexed(shoppingList) { _, item ->
-                        ShoppingItemCard(
-                            item = item,
-                            onToggleBought = { viewModel.toggleBought(item) },
-                            onDelete = {
-                                val deletedItem = item
-                                viewModel.deleteItem(item)
-                                scope.launch {
-                                    val result = snackbarHostState.showSnackbar(
-                                        message = "Item deleted",
-                                        actionLabel = "Cancel",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                    if (result == SnackbarResult.ActionPerformed) {
-                                        viewModel.restoreItem(deletedItem)
+                if (selectedTabId != null) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
+                    ) {
+                        item {
+                            AddItemButton { viewModel.addItem(it) }
+                        }
+                        itemsIndexed(shoppingList) { _, item ->
+                            ShoppingItemCard(
+                                item = item,
+                                onToggleBought = { viewModel.toggleBought(item) },
+                                onDelete = {
+                                    val deletedItem = item
+                                    viewModel.deleteItem(item)
+                                    scope.launch {
+                                        val result = snackbarHostState.showSnackbar(
+                                            message = "Item deleted",
+                                            actionLabel = "Cancel",
+                                            duration = SnackbarDuration.Short
+                                        )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            viewModel.restoreItem(deletedItem)
+                                        }
                                     }
+                                },
+                                onUpdateName = { newName ->
+                                    viewModel.updateItem(item.copy(name = newName))
                                 }
-                            },
-                            onUpdateName = { newName ->
-                                viewModel.updateItem(item.copy(name = newName))
-                            }
-                        )
+                            )
+                        }
                     }
-                }
-            } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Create a tab to start")
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Create a tab to start")
+                    }
                 }
             }
         }
-    }
 
-    if (showAddTabDialog) {
-        var tabName by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showAddTabDialog = false },
-            title = { Text("New Tab") },
-            text = {
-                OutlinedTextField(
-                    value = tabName,
-                    onValueChange = { tabName = it },
-                    label = { Text("Tab Name") },
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    if (tabName.isNotBlank()) {
-                        viewModel.addTab(tabName)
-                        showAddTabDialog = false
-                    }
-                }) { Text("Create") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddTabDialog = false }) { Text("Cancel") }
-            }
-        )
-    }
+        if (showAddTabDialog) {
+            var tabName by remember { mutableStateOf("") }
+            AlertDialog(
+                onDismissRequest = { showAddTabDialog = false },
+                title = { Text("New Tab") },
+                text = {
+                    OutlinedTextField(
+                        value = tabName,
+                        onValueChange = { tabName = it },
+                        label = { Text("Tab Name") },
+                        singleLine = true
+                    )
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        if (tabName.isNotBlank()) {
+                            viewModel.addTab(tabName)
+                            showAddTabDialog = false
+                        }
+                    }) { Text("Create") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAddTabDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
 
-    if (showRenameTabDialog != null) {
-        var newName by remember { mutableStateOf(showRenameTabDialog?.title ?: "") }
-        AlertDialog(
-            onDismissRequest = { showRenameTabDialog = null },
-            title = { Text("Rename Tab") },
-            text = {
-                OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    label = { Text("New Name") },
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    if (newName.isNotBlank()) {
-                        viewModel.renameTab(showRenameTabDialog!!, newName)
-                        showRenameTabDialog = null
-                    }
-                }) { Text("Save") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRenameTabDialog = null }) { Text("Cancel") }
-            }
-        )
+        if (showRenameTabDialog != null) {
+            var newName by remember { mutableStateOf(showRenameTabDialog?.title ?: "") }
+            AlertDialog(
+                onDismissRequest = { showRenameTabDialog = null },
+                title = { Text("Rename Tab") },
+                text = {
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        label = { Text("New Name") },
+                        singleLine = true
+                    )
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        if (newName.isNotBlank()) {
+                            viewModel.renameTab(showRenameTabDialog!!, newName)
+                            showRenameTabDialog = null
+                        }
+                    }) { Text("Save") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRenameTabDialog = null }) { Text("Cancel") }
+                }
+            )
+        }
     }
 }
