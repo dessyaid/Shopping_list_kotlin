@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.shoppinglist.model.ShoppingItem
@@ -213,6 +214,17 @@ fun AddItemButton(addItem: (String, Double?, String?) -> Unit = { _, _, _ -> }) 
 }
 
 @Composable
+fun ShoppingVerticalDivider() {
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 6.dp, vertical = 10.dp)
+            .fillMaxHeight()
+            .width(1.dp)
+            .background(Color.Gray.copy(alpha = 0.7f), CircleShape)
+    )
+}
+
+@Composable
 fun DeleteIconButton(onDelete: () -> Unit) {
     IconButton(onClick = onDelete) {
         Icon(
@@ -274,34 +286,43 @@ fun ShoppingItemCard(
                 onClick = { if (!isEditing) onToggleBought() },
                 onLongClick = { if (!isEditing) showDescription = !showDescription }
             )
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Row(
+            modifier = Modifier.height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (!isEditing) {
                 Checkbox(checked = item.isBought, onCheckedChange = {
                     onToggleBought()
                 })
+                
                 Text(
                     text = item.name,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
                     fontSize = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     textDecoration = if (item.isBought)
                         TextDecoration.LineThrough else TextDecoration.None,
                     color = if (item.isBought) Color.Gray else Color.Black
                 )
+
                 if (item.price != null) {
+                    ShoppingVerticalDivider()
                     Text(
                         text = "${item.price}",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.DarkGray,
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp)
                     )
                 }
                 
+                ShoppingVerticalDivider()
                 DeleteIconButton(onDelete = onDelete)
+                
+                ShoppingVerticalDivider()
                 SettingsIconButton(onEdit = { 
                     editedName = item.name
                     editedPrice = item.price?.toString() ?: ""
@@ -310,7 +331,7 @@ fun ShoppingItemCard(
                 })
 
             } else {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f).padding(vertical = 4.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
