@@ -8,7 +8,7 @@ import com.example.shoppinglist.dao.ShoppingDao
 import com.example.shoppinglist.model.ShoppingItem
 import com.example.shoppinglist.model.TabItem
 
-@Database(entities = [ShoppingItem::class, TabItem::class], version = 4)
+@Database(entities = [ShoppingItem::class, TabItem::class], version = 5)
 abstract class ShoppingDatabase: RoomDatabase() {
     abstract fun shoppingDao(): ShoppingDao
 

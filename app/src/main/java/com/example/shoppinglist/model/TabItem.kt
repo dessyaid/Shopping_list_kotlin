@@ -6,5 +6,6 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "tabs")
 data class TabItem(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val title: String
+    val title: String,
+    val isArchived: Boolean = false
 )

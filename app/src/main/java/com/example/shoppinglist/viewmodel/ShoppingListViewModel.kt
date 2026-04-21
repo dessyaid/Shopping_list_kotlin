@@ -57,6 +57,12 @@ class ShoppingListViewModel(application: Application): AndroidViewModel(applicat
         }
     }
 
+    fun toggleArchiveTab(tab: TabItem) {
+        viewModelScope.launch(Dispatchers.IO) {
+            dao.insertTab(tab.copy(isArchived = !tab.isArchived))
+        }
+    }
+
     fun deleteTab(tab: TabItem) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.deleteTabWithItems(tab)

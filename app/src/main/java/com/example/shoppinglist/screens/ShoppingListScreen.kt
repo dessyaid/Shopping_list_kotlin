@@ -44,6 +44,7 @@ fun ShoppingListScreen(viewModel: ShoppingListViewModel = viewModel(
                 currentTab = currentTab,
                 onAddTab = { showAddTabDialog = true },
                 onRenameTab = { showRenameTabDialog = it },
+                onArchiveTab = { viewModel.toggleArchiveTab(it) },
                 onDeleteTab = { viewModel.deleteTab(it) }
             )
         },
@@ -62,6 +63,7 @@ fun ShoppingListScreen(viewModel: ShoppingListViewModel = viewModel(
             if (selectedTabId != null) {
                 ShoppingItemsList(
                     shoppingList = shoppingList,
+                    isArchived = currentTab?.isArchived ?: false,
                     onAddItem = { name, price, desc -> viewModel.addItem(name, price, desc) },
                     onToggleBought = { viewModel.toggleBought(it) },
                     onDelete = { item ->
@@ -79,7 +81,8 @@ fun ShoppingListScreen(viewModel: ShoppingListViewModel = viewModel(
                     },
                     onUpdateItem = { item, name, price, desc ->
                         viewModel.updateItem(item.copy(name = name, price = price, description = desc))
-                    }
+                    },
+                    onUnarchive = { currentTab?.let { viewModel.toggleArchiveTab(it) } }
                 )
             } else {
                 EmptyState()

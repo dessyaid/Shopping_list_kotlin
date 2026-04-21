@@ -32,12 +32,30 @@ fun ShoppingListTopAppBar(
     currentTab: TabItem?,
     onAddTab: () -> Unit,
     onRenameTab: (TabItem) -> Unit,
+    onArchiveTab: (TabItem) -> Unit,
     onDeleteTab: (TabItem) -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     TopAppBar(
-        title = { Text(currentTab?.title ?: "Shopping List") },
+        title = { 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(currentTab?.title ?: "Shopping List")
+                if (currentTab?.isArchived == true) {
+                    Spacer(Modifier.width(8.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = CircleShape
+                    ) {
+                        Text(
+                            "Archived",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            }
+        },
         actions = {
             IconButton(onClick = onAddTab) {
                 Icon(Icons.Default.Add, contentDescription = "Add Tab")
@@ -52,6 +70,13 @@ fun ShoppingListTopAppBar(
                             text = { Text("Rename Tab") },
                             onClick = {
                                 onRenameTab(currentTab)
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (currentTab.isArchived) "Unarchive Tab" else "Archive Tab") },
+                            onClick = {
+                                onArchiveTab(currentTab)
                                 showMenu = false
                             }
                         )
@@ -83,7 +108,19 @@ fun TabSelector(
             Tab(
                 selected = selectedTabId == tab.id,
                 onClick = { onTabSelected(tab.id) },
-                text = { Text(tab.title) }
+                text = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(tab.title)
+                        if (tab.isArchived) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp).padding(start = 4.dp),
+                                tint = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+                }
             )
         }
     }
@@ -92,10 +129,12 @@ fun TabSelector(
 @Composable
 fun ShoppingItemsList(
     shoppingList: List<ShoppingItem>,
+    isArchived: Boolean,
     onAddItem: (String, Double?, String?) -> Unit,
     onToggleBought: (ShoppingItem) -> Unit,
     onDelete: (ShoppingItem) -> Unit,
-    onUpdateItem: (ShoppingItem, String, Double?, String?) -> Unit
+    onUpdateItem: (ShoppingItem, String, Double?, String?) -> Unit,
+    onUnarchive: () -> Unit = {}
 ) {
     val hasPrices = shoppingList.any { it.price != null }
     val totalSum = shoppingList.sumOf { it.price ?: 0.0 }
@@ -105,9 +144,12 @@ fun ShoppingItemsList(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        item {
-            AddItemButton { name, price, desc -> onAddItem(name, price, desc) }
+        if (!isArchived) {
+            item {
+                AddItemButton { name, price, desc -> onAddItem(name, price, desc) }
+            }
         }
+
         itemsIndexed(shoppingList) { _, item ->
             ShoppingItemCard(
                 item = item,
