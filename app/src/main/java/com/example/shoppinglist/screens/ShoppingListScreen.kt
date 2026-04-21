@@ -81,8 +81,7 @@ fun ShoppingListScreen(viewModel: ShoppingListViewModel = viewModel(
                     },
                     onUpdateItem = { item, name, price, desc ->
                         viewModel.updateItem(item.copy(name = name, price = price, description = desc))
-                    },
-                    onUnarchive = { currentTab?.let { viewModel.toggleArchiveTab(it) } }
+                    }
                 )
             } else {
                 EmptyState()
