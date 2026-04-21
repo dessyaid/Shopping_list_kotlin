@@ -133,8 +133,7 @@ fun ShoppingItemsList(
     onAddItem: (String, Double?, String?) -> Unit,
     onToggleBought: (ShoppingItem) -> Unit,
     onDelete: (ShoppingItem) -> Unit,
-    onUpdateItem: (ShoppingItem, String, Double?, String?) -> Unit,
-    onUnarchive: () -> Unit = {}
+    onUpdateItem: (ShoppingItem, String, Double?, String?) -> Unit
 ) {
     val hasPrices = shoppingList.any { it.price != null }
     val totalSum = shoppingList.sumOf { it.price ?: 0.0 }
