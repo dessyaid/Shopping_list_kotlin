@@ -66,10 +66,10 @@ class ShoppingListViewModel(application: Application): AndroidViewModel(applicat
         }
     }
 
-    fun addItem(name: String) {
+    fun addItem(name: String, price: Double? = null, description: String? = null) {
         val currentTabId = _selectedTabId.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            dao.insertItem(ShoppingItem(name = name, tabId = currentTabId))
+            dao.insertItem(ShoppingItem(name = name, tabId = currentTabId, price = price, description = description))
         }
     }
 

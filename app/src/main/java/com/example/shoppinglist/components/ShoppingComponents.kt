@@ -1,40 +1,208 @@
 package com.example.shoppinglist.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.shoppinglist.model.ShoppingItem
+import com.example.shoppinglist.model.TabItem
+import java.util.Locale
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ShoppingListTopAppBar(
+    currentTab: TabItem?,
+    onAddTab: () -> Unit,
+    onRenameTab: (TabItem) -> Unit,
+    onDeleteTab: (TabItem) -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    TopAppBar(
+        title = { Text(currentTab?.title ?: "Shopping List") },
+        actions = {
+            IconButton(onClick = onAddTab) {
+                Icon(Icons.Default.Add, contentDescription = "Add Tab")
+            }
+            if (currentTab != null) {
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Tab Settings")
+                    }
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Rename Tab") },
+                            onClick = {
+                                onRenameTab(currentTab)
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete Tab") },
+                            onClick = {
+                                onDeleteTab(currentTab)
+                                showMenu = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
 
 @Composable
-fun AddItemButton(addItem: (String) -> Unit = {}) {
-    var text by remember { mutableStateOf("") }
+fun TabSelector(
+    tabs: List<TabItem>,
+    selectedTabId: Int?,
+    onTabSelected: (Int) -> Unit
+) {
+    ScrollableTabRow(
+        selectedTabIndex = tabs.indexOfFirst { it.id == selectedTabId }.coerceAtLeast(0),
+        edgePadding = 16.dp
+    ) {
+        tabs.forEach { tab ->
+            Tab(
+                selected = selectedTabId == tab.id,
+                onClick = { onTabSelected(tab.id) },
+                text = { Text(tab.title) }
+            )
+        }
+    }
+}
+
+@Composable
+fun ShoppingItemsList(
+    shoppingList: List<ShoppingItem>,
+    onAddItem: (String, Double?, String?) -> Unit,
+    onToggleBought: (ShoppingItem) -> Unit,
+    onDelete: (ShoppingItem) -> Unit,
+    onUpdateItem: (ShoppingItem, String, Double?, String?) -> Unit
+) {
+    val hasPrices = shoppingList.any { it.price != null }
+    val totalSum = shoppingList.sumOf { it.price ?: 0.0 }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        item {
+            AddItemButton { name, price, desc -> onAddItem(name, price, desc) }
+        }
+        itemsIndexed(shoppingList) { _, item ->
+            ShoppingItemCard(
+                item = item,
+                onToggleBought = { onToggleBought(item) },
+                onDelete = { onDelete(item) },
+                onUpdateItem = { name, price, desc -> onUpdateItem(item, name, price, desc) }
+            )
+        }
+        if (hasPrices) {
+            item {
+                TotalSumRow(totalSum)
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyState() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text("Create a tab to start")
+    }
+}
+
+@Composable
+fun TabNameDialog(
+    title: String,
+    initialName: String = "",
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var name by remember { mutableStateOf(initialName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Tab Name") },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(onClick = {
+                if (name.isNotBlank()) {
+                    onConfirm(name)
+                }
+            }) { Text("Confirm") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+fun AddItemButton(addItem: (String, Double?, String?) -> Unit = { _, _, _ -> }) {
+    var name by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.padding(bottom = 16.dp))  {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Item Name") },
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedTextField(
+                value = price,
+                onValueChange = { price = it },
+                label = { Text("Price") },
+                modifier = Modifier.width(100.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
-            value = text,
-            onValueChange = {text = it },
-            label = { Text("Add Item") },
+            value = description,
+            onValueChange = { description = it },
+            label = { Text("Description") },
             modifier = Modifier.fillMaxWidth()
         )
+        Spacer(modifier = Modifier.height(8.dp))
         Button(
             onClick = {
-                if (text.isNotEmpty()) {
-                    addItem(text)
-                    text = ""
+                if (name.isNotEmpty()) {
+                    val priceDouble = price.toDoubleOrNull()
+                    addItem(name, priceDouble, description.ifBlank { null })
+                    name = ""
+                    price = ""
+                    description = ""
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -80,17 +248,21 @@ fun SettingsIconButton(onEdit: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ShoppingItemCard(
     item: ShoppingItem,
     onToggleBought: () -> Unit = {},
     onDelete: () -> Unit = {},
-    onUpdateName: (String) -> Unit = {},
+    onUpdateItem: (String, Double?, String?) -> Unit = { _, _, _ -> },
 ) {
     var isEditing by remember { mutableStateOf(false) }
+    var showDescription by remember { mutableStateOf(false) }
     var editedName by remember { mutableStateOf(item.name) }
+    var editedPrice by remember { mutableStateOf(item.price?.toString() ?: "") }
+    var editedDescription by remember { mutableStateOf(item.description ?: "") }
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
@@ -98,43 +270,122 @@ fun ShoppingItemCard(
                 if (item.isBought) Color.LightGray.copy(alpha = 0.5f) else Color.LightGray,
                 MaterialTheme.shapes.large
             )
-            .clickable { if (!isEditing) onToggleBought() }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .combinedClickable(
+                onClick = { if (!isEditing) onToggleBought() },
+                onLongClick = { if (!isEditing) showDescription = !showDescription }
+            )
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        if (!isEditing) {
-            Checkbox(checked = item.isBought, onCheckedChange = {
-                onToggleBought()
-            })
-            Text(
-                text = item.name,
-                modifier = Modifier.weight(1f),
-                fontSize = 18.sp,
-                textDecoration = if (item.isBought)
-                    TextDecoration.LineThrough else TextDecoration.None,
-                color = if (item.isBought) Color.Gray else Color.Black
-            )
-            
-            DeleteIconButton(onDelete = onDelete)
-            SettingsIconButton(onEdit = { isEditing = true })
-
-        } else {
-            OutlinedTextField(
-                value = editedName,
-                onValueChange = { editedName = it },
-                modifier = Modifier.weight(1f),
-                singleLine = true
-            )
-            IconButton(onClick = {
-                if (editedName.isNotBlank()) {
-                    onUpdateName(editedName)
-                    isEditing = false
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (!isEditing) {
+                Checkbox(checked = item.isBought, onCheckedChange = {
+                    onToggleBought()
+                })
+                Text(
+                    text = item.name,
+                    modifier = Modifier.weight(1f),
+                    fontSize = 18.sp,
+                    textDecoration = if (item.isBought)
+                        TextDecoration.LineThrough else TextDecoration.None,
+                    color = if (item.isBought) Color.Gray else Color.Black
+                )
+                if (item.price != null) {
+                    Text(
+                        text = "${item.price}",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.DarkGray,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
                 }
-            }) {
-                Icon(Icons.Default.Check,
-                    contentDescription = "Save", tint = Color.Green)
+                
+                DeleteIconButton(onDelete = onDelete)
+                SettingsIconButton(onEdit = { 
+                    editedName = item.name
+                    editedPrice = item.price?.toString() ?: ""
+                    editedDescription = item.description ?: ""
+                    isEditing = true 
+                })
+
+            } else {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = editedName,
+                            onValueChange = { editedName = it },
+                            label = { Text("Name") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = editedPrice,
+                            onValueChange = { editedPrice = it },
+                            label = { Text("Price") },
+                            modifier = Modifier.width(100.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
+                    }
+                    OutlinedTextField(
+                        value = editedDescription,
+                        onValueChange = { editedDescription = it },
+                        label = { Text("Description") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                IconButton(onClick = {
+                    if (editedName.isNotBlank()) {
+                        onUpdateItem(
+                            editedName,
+                            editedPrice.toDoubleOrNull(),
+                            editedDescription.ifBlank { null }
+                        )
+                        isEditing = false
+                    }
+                }) {
+                    Icon(Icons.Default.Check,
+                        contentDescription = "Save", tint = Color.Green)
+                }
             }
         }
+        
+        AnimatedVisibility(visible = showDescription && !isEditing && !item.description.isNullOrBlank()) {
+            Column(modifier = Modifier.padding(start = 48.dp, top = 4.dp, bottom = 8.dp)) {
+                Text(
+                    text = item.description ?: "",
+                    fontSize = 14.sp,
+                    color = Color.DarkGray
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TotalSumRow(total: Double) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Total: ",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = String.format(Locale.getDefault(), "%.2f", total),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
 

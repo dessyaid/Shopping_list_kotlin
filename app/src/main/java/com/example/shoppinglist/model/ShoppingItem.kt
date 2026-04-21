@@ -7,6 +7,8 @@ import androidx.room.PrimaryKey
 data class ShoppingItem(
     val name: String,
     var isBought: Boolean = false,
-    val tabId: Int, // Link to TabItem
+    val tabId: Int,
+    val price: Double? = null,
+    val description: String? = null,
     @PrimaryKey(autoGenerate = true) val id: Int = 0
 )
